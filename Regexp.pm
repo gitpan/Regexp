@@ -1,39 +1,23 @@
 package Regexp;
 
 use vars qw(@EXPORT_OK @ISA $VERSION);
+use overload '""' => 'stringify';
 
-require DynaLoader;
-require Exporter;
+BEGIN {
+    require DynaLoader;
+    require Exporter;
 
-@ISA = qw(Exporter DynaLoader);
+    @ISA = qw(Exporter DynaLoader);
 
-@EXPORT_OK = qw(FOLD EVAL MULTILINE SINGLELINE KEEP GLOBAL EXTENDED);
+    @EXPORT_OK = qw(FOLD MULTILINE SINGLELINE GLOBAL EXTENDED NOCASE);
 
-$VERSION = "0.003";
+    $VERSION = "0.004";
 
-bootstrap Regexp $VERSION;
-
-sub AUTOLOAD {
-    # This AUTOLOAD is used to 'autoload' constants from the constant()
-    # XS function.  If a constant is not found then control is passed
-    # to the AUTOLOAD in AutoLoader.
-
-    local($constname);
-    ($constname = $AUTOLOAD) =~ s/.*:://;
-    $val = constant($constname, @_ ? $_[0] : 0);
-    if ($! != 0) {
-	if ($! =~ /Invalid/) {
-	    $AutoLoader::AUTOLOAD = $AUTOLOAD;
-	    goto &AutoLoader::AUTOLOAD;
-	}
-	else {
-	    ($pack,$file,$line) = caller;
-	    die "Your vendor has not defined Regexp macro $constname, used at $file line $line.\n";
-	}
-    }
-    eval "sub $AUTOLOAD () { $val }";
-    goto &$AUTOLOAD;
+    bootstrap Regexp $VERSION;
 }
+
+sub stringify { shift->pattern }
+
 
 1;
 
@@ -57,8 +41,8 @@ Regexp - Object Oriented interface to perl's regular expression code
 
     $re->pattern
 
-    my @info  = $re->parentheses
-    my $count = $re->parentheses
+    my @info  = $re->backref
+    my $count = $re->backref
 
 
 =head1 DESCRIPTION
@@ -82,6 +66,10 @@ together constants which Regexp conditionally exports. The constants are :
 
 Perform case-insensitive matches. See C</i> in L<perlre>
 
+=item NOCASE
+
+A synonym for FOLD
+
 =item MULTILINE
 
 Treat strings as multiple lines, See C</m> in L<perlre>
@@ -96,7 +84,7 @@ Use extended patter formats to increase legibility, See C</x> in L<perlre>
 
 =back
 
-=item current ()
+=item current
 
 Returns an object which represents the current (last) pattern.
 
@@ -106,10 +94,23 @@ Returns an object which represents the current (last) pattern.
 
 =over 4
 
+=item minlength
+
+Returns the minimum length that a string has to be before it
+will match the regular expression
+
+=item pattern
+
+Returns the pattern text
+
 =item match ( STRING [, OFFSET [, FLAGS]] )
 
 C<match> is like the C<=~> operator in perl. C<STRING> is the string
 which the regexp is to be applied. C<OFFEST> and C<FLAGS> are both optional.
+
+In a scalar context C<match> returns a true or false value depending
+on whether the match was sucessful. In an array context C<match> returns
+an array of the contents of all the backreferences, or an empty array.
 
 C<OFFSET>, if given, directs the regexp code to start trying to match
 the regexp at the given offset from the start of C<STRING>
@@ -122,7 +123,10 @@ together constants which Regexp conditionally exports. The constants are :
 =item GLOBAL
 
 Match as many times as possible, starting each time where the previous
-match ended. See C</g> option in L<perlre>
+match ended. See C</g> option in L<perlre>.
+
+If C<match> is called in an array context and the C<GLOBAL> flag is set then
+the result will be an array of all the backreferences from all the matches.
 
 =back
 
@@ -134,16 +138,25 @@ Returns the number of parentheses in the expression
 
 Returns the number of the last parentheses that matched.
 
-=item minlength
+=item backref ( [INDEX] )
 
-Returns the minimum length that a string has to be before it
-will match the regular expression
+The result of C<backref> is sensetive to how it is called.
 
-=item pattern
+If called with a single argument then C<backref> returns the text
+for the given backreference in the pattern. Backreferences are
+numbered from 1 as with C<$1..$9>.
 
-Returns the pattern text
+If called with a single argument of zero, then C<backref> will
+return the text of the last match. (Same as C<lastmatch>)
 
-=item parentheses
+If called without any arguments, and in a scalar context, then
+C<backref> will return the number of backreferences that there are
+in the C<Regexp> object. (Same as C<nparens>)
+
+If called without any arguments, and in aN array context, then
+C<backref> will return a list of all the backreference values
+from the last match.
+
 
 =item prematch
 
@@ -157,22 +170,27 @@ Returns the text of the last match
 
 Returns the text following the text of the last match
 
+=item startpos
+
+Returns the offset into the B<original> string to the start of the text
+in the last match.
+
 =item length
 
 Returns the length of the text in the last match
 
-=item endpos ()
+=item endpos
 
-Returns the offset into the original string to the start of the text
-following the last match.
+Returns the offset into the B<original> string to the end of the text
+in the last match.
 
 =back
 
 =head1 AUTHORS
 
-Regexp is a combination of two previous modules by
+Regexp is a combination of work by
 Nick Ing-Simmons E<lt>F<nick@ni-s.u-net.com>E<gt> and
-Ilya Zakharevich E<lt>F<ilya@math.ohio-state.edu>E<gt> combined together by
-Graham Barr E<lt>F<bodg@tiuk.ti.com>E<gt>
+Ilya Zakharevich E<lt>F<ilya@math.ohio-state.edu>E<gt> brought together 
+and improved by Graham Barr E<lt>F<bodg@tiuk.ti.com>E<gt>
 
 =cut

@@ -21,133 +21,113 @@ extern "C" {
 #define PerlIO_stderr() stderr
 #endif
 
-static int
-not_here(s)
-	char *	s;
-{
-    croak("%s not implemented on this architecture", s);
-    return -1;
-}
-
-static int
-constant(name, arg)
-	char *	name;
-	int	arg;
-{
-    errno = 0;
-    switch (*name) {
-    case 'E':
-	if (strEQ(name, "EVAL"))
-#ifdef PMf_EVAL
-	    return PMf_EVAL;
-#else
-	    goto not_there;
-#endif
-	if (strEQ(name, "EXTENDED"))
-#ifdef PMf_EXTENDED
-	    return PMf_EXTENDED;
-#else
-	    goto not_there;
-#endif
-	    break;
-    case 'F':
-	if (strEQ(name, "FOLD"))
-#ifdef PMf_FOLD
-		return PMf_FOLD;
-#else
-	    goto not_there;
-#endif
-	    break;
-    case 'G':
-	if (strEQ(name, "GLOBAL"))
-#ifdef PMf_GLOBAL
-	    return PMf_GLOBAL;
-#else
-	    goto not_there;
-#endif
-	    break;
-    case 'K':
-	if (strEQ(name, "KEEP"))
-#ifdef PMf_KEEP
-	    return PMf_KEEP;
-#else
-	    goto not_there;
-#endif
-	    break;
-    case 'M':
-	if (strEQ(name, "MULTILINE"))
-#ifdef PMf_MULTILINE
-	    return PMf_MULTILINE;
-#else
-	    goto not_there;
-#endif
-	    break;
-    case 'S':
-	if (strEQ(name, "SINGLELINE"))
-#ifdef PMf_SINGLELINE
-	    return PMf_SINGLELINE;
-#else
-	    goto not_there;
-#endif
-	    break;
-    default:
-	goto not_there;
-    }
-    errno = EINVAL;
-    return 0;
-
-not_there:
-    errno = ENOENT;
-    return 0;
-}
-
 #define DEFAULT_SCALAR GvSV(defgv)
+
+#define Const_FOLD()	   (PMf_FOLD)
+#define Const_SINGLELINE() (PMf_SINGLELINE)
+#define Const_MULTILINE()  (PMf_MULTILINE)
+#define Const_KEEP()	   (PMf_KEEP)
+#define Const_GLOBAL()	   (PMf_GLOBAL)
+#define Const_NOCASE()	   (PMf_FOLD)
+#define Const_EXTENDED()   (PMf_EXTENDED)
+#define Const_EVAL()	   (PMf_EVAL)
 
 #define Regexp_nparens(rx) ((rx)->nparens)
 #define Regexp_lastparen(rx) ((rx)->lastparen)
 #define Regexp_minlength(rx) ((rx)->minlen)
 
+MODULE = Regexp	PACKAGE = Regexp	PREFIX=Const_
+
+I32
+Const_FOLD(...)
+PROTOTYPE:
+
+I32
+Const_SINGLELINE(...)
+PROTOTYPE:
+
+I32
+Const_MULTILINE(...)
+PROTOTYPE:
+
+I32
+Const_KEEP(...)
+PROTOTYPE:
+
+I32
+Const_GLOBAL(...)
+PROTOTYPE:
+
+I32
+Const_NOCASE(...)
+PROTOTYPE:
+
+I32
+Const_EXTENDED(...)
+PROTOTYPE:
+
+I32
+Const_EVAL(...)
+PROTOTYPE:
+
 MODULE = Regexp	PACKAGE = Regexp	PREFIX=Regexp_
 
 I32
 Regexp_nparens(re)
-	regexp *	re
+    regexp *	re
 
 I32
 Regexp_minlength(re)
-	regexp *	re
+    regexp *	re
 
 I32
 Regexp_lastparen(re)
-	regexp *	re
+    regexp *	re
 
 MODULE = Regexp	PACKAGE = Regexp
 
-int
-constant(name,arg)
-	char *	name
-	int	arg
-
 void
 pattern(re)
-	regexp *	re
+    regexp *	re
 PPCODE:
 {
-    ST(0) = sv_newmortal();
-    sv_setpvn(ST(0), re->precomp, re->prelen);
+    if(re->precomp) {
+	ST(0) = sv_newmortal();
+	sv_setpvn(ST(0), re->precomp, re->prelen);
+    }
+    else
+	ST(0) = &sv_undef;
+
     XSRETURN(1);
 }
 
 void
-parentheses(re)
-	regexp *	re
+backref(re,index = -1)
+    regexp *	re
+    int		index
 PPCODE:
 {
-    if (GIMME & G_ARRAY) {
+    if (items == 2) {
+	if(index >= 0 && index <= re->nparens && re->startp[index] != Nullch) {
+	    ST(0) = sv_newmortal();
+	    sv_setpvn(ST(0),re->startp[index],
+		re->endp[index] - re->startp[index]);
+	}
+	else
+	    ST(0) = &sv_undef;
+	XSRETURN(1);
+    }
+    else if (GIMME & G_ARRAY) {
 	int i;
 	for (i=1; i <= re->nparens; i++) {
-	    SV *sv = sv_newmortal();
-	    sv_setpvn(sv,re->startp[i],re->endp[i] - re->startp[i]);
+	    SV *sv;
+	    if(re->startp[i]) {
+		sv = sv_newmortal();
+		sv_setpvn(sv,re->startp[i],re->endp[i] - re->startp[i]);
+	    }
+	    else
+		sv = &sv_undef;
+
 	    XPUSHs(sv);
 	}
 	XSRETURN(re->nparens);
@@ -159,37 +139,49 @@ PPCODE:
 
 void
 prematch(re)
-	regexp *	re
+    regexp *	re
 PPCODE:
 {
-    ST(0) = sv_newmortal();
-    sv_setpvn(ST(0),re->subbeg,re->startp[0] - re->subbeg);
+    if(re->startp[0]) {
+	ST(0) = sv_newmortal();
+	sv_setpvn(ST(0),re->subbeg,re->startp[0] - re->subbeg);
+    }
+    else
+	ST(0) = &sv_undef;
     XSRETURN(1);
 }
 
 void
 postmatch(re)
-	regexp *	re
+    regexp *	re
 PPCODE:
 {
-    ST(0) = sv_newmortal();
-    sv_setpvn(ST(0),re->endp[0],re->subend- re->endp[0]);
+    if(re->startp[0]) {
+	ST(0) = sv_newmortal();
+	sv_setpvn(ST(0),re->endp[0],re->subend - re->endp[0]);
+    }
+    else
+	ST(0) = &sv_undef;
     XSRETURN(1);
 }
 
 void
 lastmatch(re)
-	regexp *	re
+    regexp *	re
 PPCODE:
 {
-    ST(0) = sv_newmortal();
-    sv_setpvn(ST(0),re->startp[0],re->endp[0] - re->startp[0]);
+    if(re->startp[0]) {
+	ST(0) = sv_newmortal();
+	sv_setpvn(ST(0),re->startp[0],re->endp[0] - re->startp[0]);
+    }
+    else
+	ST(0) = &sv_undef;
     XSRETURN(1);
 }
 
 void
 length(re)
-	regexp *	re
+    regexp *	re
 PPCODE:
 {
     XSRETURN_IV(re->endp[0] - re->startp[0]);
@@ -197,17 +189,25 @@ PPCODE:
 
 void
 endpos(re)
-	regexp *	re
+    regexp *	re
 PPCODE:
 {
     XSRETURN_IV(re->endp[0] - re->subbeg);
 }
 
+void
+startpos(re)
+    regexp *	re
+PPCODE:
+{
+    XSRETURN_IV(re->startp[0] - re->subbeg);
+}
+
 regexp *
 new(class,pattern,pmflags = 0)
-	char *	class
-	SV   *	pattern
-	U16	pmflags
+    char *	class
+    SV   *	pattern
+    U16		pmflags
 CODE:
 {
     regexp *re;
@@ -223,10 +223,10 @@ OUTPUT:
 
 void
 match(re, string = DEFAULT_SCALAR, offset = 0, flags = 0)
-	regexp *	re
-	SV *		string
-	IV		offset
-	IV		flags 
+    regexp *	re
+    SV     *	string
+    IV		offset
+    IV		flags 
 PPCODE:
 {
     STRLEN len;
@@ -275,7 +275,7 @@ PPCODE:
 
 void
 regdump(re)
-	regexp *	re
+    regexp *	re
 CODE:
 {
 #ifdef DEBUGGING
@@ -294,7 +294,7 @@ CODE:
 
 void
 DESTROY(re)
-	regexp *	re
+    regexp *	re
 PPCODE:
 {
     if(!(SvFLAGS(SvRV(ST(0))) & SVf_BREAK))
@@ -303,7 +303,7 @@ PPCODE:
 
 regexp *
 current(class)
-	char *	class
+    char *	class
 PPCODE:
 {
     regexp *re = (curpm) ? curpm->op_pmregexp : NULL;

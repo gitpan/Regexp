@@ -22,7 +22,7 @@ passed($re->pattern eq '\b([fo]+)\b');
 
 passed($re->match("pre foo post"));
 
-passed(($re->parentheses)[0] eq 'foo');
+passed(($re->backref)[0] eq 'foo');
 
 passed($re->prematch eq 'pre ');
 
