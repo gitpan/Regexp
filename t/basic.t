@@ -1,48 +1,52 @@
 #!perl 
-$| = 1;
+
 my $t = 0;
-print "1..14\n";
+
+sub passed {
+    
+    print "# line ",(caller)[2],"\nnot "
+	unless $_[0];
+    print "ok ",++$t,"\n";
+
+}
+
+$| = 1;
+print "1..15\n";
 require Regexp;
 print "ok ",++$t,"\n";
 my $re = new Regexp q/\b([fo]+)\b/;
-print "not " unless $re;
-print "ok ",++$t,"\n";
-print "not " unless $re->pattern eq '\b([fo]+)\b';
-print "ok ",++$t,"\n";
-print "not " unless $re->match("pre foo post");
-print "ok ",++$t,"\n";
-print "not " unless ($re->parentheses)[0] eq 'foo';
-print "ok ",++$t,"\n";
-print "not " unless $re->prematch eq 'pre ';
-print "ok ",++$t,"\n";
-print "not " unless $re->postmatch eq ' post';
-print "ok ",++$t,"\n";
-print "not " if $re->match("bar");
-print "ok ",++$t,"\n";
+
+passed($re);
+
+passed($re->pattern eq '\b([fo]+)\b');
+
+passed($re->match("pre foo post"));
+
+passed(($re->parentheses)[0] eq 'foo');
+
+passed($re->prematch eq 'pre ');
+
+passed($re->postmatch eq ' post');
+
+passed($re->match("bar") ? 0 : 1);
+
 foreach ('foo','bar','foobar','foo bar')
  {
-  my $m = match $re;
-  print "not " unless ($m == /\bfoo\b/);
-  print "ok ",++$t,"\n";
+  my $m =  match $re;
+  passed( /\bfoo\b/ ? $m : not($m));
  }
 
 $s = "foo foo foo";
 
-if (0) {                
-
 if ($s =~ /o+/)
  {
   my $cur = current Regexp;
-  print "not " unless $cur->pattern eq 'o+';
-  print "ok ",++$t,"\n";
+  passed($cur->pattern eq 'o+');
  }
-}
 
-print "not " unless($re->match($s,length($s)-3));
-print "ok ",++$t,"\n";
+passed($re->match($s,length($s)-3));
 
-print "not " if($re->match($s,length($s)-2));
-print "ok ",++$t,"\n";
+passed(! ($re->match($s,length($s)-2)));
 
 
 
