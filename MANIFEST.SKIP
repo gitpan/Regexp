@@ -1,0 +1,6 @@
+%$
+\.(bak|old|o|bs)$
+\.tar\.
+\bblib\b
+Regexp\.c$
+(Makefile|pm_to_blib)$

@@ -1,0 +1,19 @@
+regexp *	T_PKGIV
+
+INPUT
+
+T_PKGIV
+	if (sv_isa($arg, \"${Package}\")) {
+	    IV tmp = SvIV((SV*)SvRV($arg));
+	    $var = ($type) tmp;
+	}
+	else
+	    croak(\"$var is not a ${Package} object\")
+
+OUTPUT
+
+T_PKGIV
+	sv_setref_iv($arg, class, (IV) $var);
+
+
+

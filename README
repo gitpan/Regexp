@@ -1,0 +1,18 @@
+This is an experimental object-oriented interface to perl's
+internal regular expression code.
+
+    my $re = new Regexp q/Some Pattern/;
+
+    if (match $re "Some String") { ... }
+
+    $re->prematch
+
+    $re->postmatch
+
+    $re->pattern
+
+
+  Copyright (c) 1997 Nick Ing-Simmons. All rights reserved.
+  This program is free software; you can redistribute it and/or
+  modify it under the same terms as Perl itself.
+
